@@ -65,6 +65,7 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")   // annotation processor
     implementation("androidx.room:room-ktx:2.6.1") // Kotlin coroutines support
 
-    // (you probably already have this)
+
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
 }

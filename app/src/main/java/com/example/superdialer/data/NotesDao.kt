@@ -11,7 +11,7 @@ interface NotesDao {
     suspend fun insert(note: NoteEntity)
 
     @Update
-    suspend fun update(note: NoteEntity)
+    suspend fun  update(note: NoteEntity)
 
     @Delete
     suspend fun delete(note: NoteEntity)
