@@ -7,24 +7,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.superdialer.data.NoteEntity
 import com.example.superdialer.data.NotesDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,15 +35,16 @@ fun NotesDialog(
 ) {
     val context = LocalContext.current
     val db = NotesDatabase.getDatabase(context)
+    val dao = db.notesDao()
     val scope = rememberCoroutineScope()
 
     var notes by remember { mutableStateOf<List<NoteEntity>>(emptyList()) }
     var showAddDialog by remember { mutableStateOf(false) }
 
-    // 🔄 Load notes initially
+    // 🔁 Collect notes reactively (Flow)
     LaunchedEffect(number) {
-        withContext(Dispatchers.IO) {
-            notes = db.notesDao().getNotesForNumber(number)
+        dao.getNotesForNumber(number).collect { fetchedNotes ->
+            notes = fetchedNotes
         }
     }
 
@@ -66,14 +68,12 @@ fun NotesDialog(
                                 note = note,
                                 onDelete = {
                                     scope.launch(Dispatchers.IO) {
-                                        db.notesDao().delete(note)
-                                        notes = db.notesDao().getNotesForNumber(number)
+                                        dao.delete(note)
                                     }
                                 },
                                 onEdit = { updated ->
                                     scope.launch(Dispatchers.IO) {
-                                        db.notesDao().update(note.copy(note = updated))
-                                        notes = db.notesDao().getNotesForNumber(number)
+                                        dao.update(note.copy(note = updated))
                                     }
                                 }
                             )
@@ -97,15 +97,14 @@ fun NotesDialog(
         }
     )
 
-    // ➕ Add note dialog
+    // ➕ Add Note Dialog (integrated, improved version)
     if (showAddDialog) {
         AddNoteDialog(
             number = number,
             onDismiss = { showAddDialog = false },
             onSave = { text ->
                 scope.launch(Dispatchers.IO) {
-                    db.notesDao().insert(NoteEntity(phoneNumber = number, note = text))
-                    notes = db.notesDao().getNotesForNumber(number)
+                    dao.insert(NoteEntity(phoneNumber = number, note = text))
                 }
                 showAddDialog = false
             }
@@ -141,7 +140,6 @@ fun ExpandableNoteItem(
                 .fillMaxWidth()
                 .padding(8.dp)
         ) {
-            // 🧠 Note title (always visible)
             Text(
                 text = title,
                 fontWeight = FontWeight.Medium,
@@ -149,7 +147,6 @@ fun ExpandableNoteItem(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
 
-            // 🪄 Expand/Collapse section
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically(),
@@ -200,32 +197,4 @@ fun ExpandableNoteItem(
     }
 }
 
-//@Composable
-//fun AddNoteDialog(
-//    number: String,
-//    onDismiss: () -> Unit,
-//    onSave: (String) -> Unit
-//) {
-//    var text by remember { mutableStateOf("") }
-//
-//    AlertDialog(
-//        onDismissRequest = onDismiss,
-//        title = { Text("Add Note for $number") },
-//        text = {
-//            OutlinedTextField(
-//                value = text,
-//                onValueChange = { text = it },
-//                placeholder = { Text("Type a note...") },
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        },
-//        confirmButton = {
-//            Button(onClick = {
-//                if (text.isNotBlank()) onSave(text)
-//            }) { Text("Save") }
-//        },
-//        dismissButton = {
-//            TextButton(onClick = onDismiss) { Text("Cancel") }
-//        }
-//    )
-//}
+
